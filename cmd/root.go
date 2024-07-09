@@ -3,105 +3,101 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
+	"path/filepath"
+	neturl "net/url"
 
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "video-downloader",
-	Short: "A CLI program to download Instagram, TikTok, and YouTube videos.",
-	Long: `This program allows you to download videos from Instagram, TikTok, and YouTube. 
-To use the program, simply run the following command:
-
-video-downloader <platform> <video_url>
-
-Supported platforms: instagram, tiktok, youtube`,
-	Args: cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		platform := args[0]
-		videoURL := args[1]
-
-		switch platform {
-		case "instagram":
-			downloadInstagramVideo(videoURL)
-		case "tiktok":
-			downloadTikTokVideo(videoURL)
-		case "youtube":
-			// Implement YouTube video download logic here
-			fmt.Println("Downloading YouTube video is not yet implemented.")
-		default:
-			fmt.Println("Unsupported platform. Please use 'instagram', 'tiktok', or 'youtube'.")
-		}
-	},
-}
-
-func downloadInstagramVideo(videoURL string) {
-	// Get the Instagram video ID.
-	videoID := strings.Split(videoURL, "/")[4]
-
-	// Download the Instagram video using the `youtube-dl` command-line tool.
-	cmd := exec.Command("youtube-dl", "-f", "mp4", videoID)
-
-	// Create a new folder named `ochevideos` if it does not already exist.
-	err := os.MkdirAll("ochevideos", 0755)
-	if err != nil {
-		fmt.Println("Error creating folder:", err)
-		return
-	}
-
-	// Set the current working directory to the `ochevideos` folder.
-	err = os.Chdir("ochevideos")
-	if err != nil {
-		fmt.Println("Error changing working directory:", err)
-		return
-	}
-
-	// Execute the `youtube-dl` command.
-	err = cmd.Run()
-	if err != nil {
-		fmt.Println("Error downloading video:", err)
-		return
-	}
-
-	fmt.Println("Video downloaded successfully!")
-}
-
-func downloadTikTokVideo(videoURL string) {
-	// Get the TikTok video ID.
-	videoID := strings.Split(videoURL, "/")[3]
-
-	// Download the TikTok video using the `tiktok-video-downloader` command-line tool.
-	cmd := exec.Command("tiktok-video-downloader", videoID)
-
-	// Create a new folder named `ochevideos` if it does not already exist.
-	err := os.MkdirAll("ochevideos", 0755)
-	if err != nil {
-		fmt.Println("Error creating folder:", err)
-		return
-	}
-
-	// Set the current working directory to the `ochevideos` folder.
-	err = os.Chdir("ochevideos")
-	if err != nil {
-		fmt.Println("Error changing working directory:", err)
-		return
-	}
-
-	// Execute the `tiktok-video-downloader` command.
-	err = cmd.Run()
-	if err != nil {
-		fmt.Println("Error downloading video:", err)
-		return
-	}
-
-	fmt.Println("Video downloaded successfully!")
-}
-
 func main() {
+	var rootCmd = &cobra.Command{
+		Use:   "video-downloader",
+		Short: "A video downloader for YouTube and Instagram",
+		Long:  `A video downloader that can download videos from YouTube and Instagram using just the URL.`,
+	}
+
+	var downloadCmd = &cobra.Command{
+		Use:   "download [URL]",
+		Short: "Download a video from the given URL",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			url := args[0]
+			fmt.Printf("Validating URL: %s\n", url)
+
+			platform, err := validateURL(url)
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+
+			downloadDir, err := createDownloadDirectory()
+			if err != nil {
+				fmt.Println("Error creating download directory:", err)
+				return
+			}
+
+			fmt.Printf("Downloading %s video to: %s\n", platform, downloadDir)
+
+			switch platform {
+			case "youtube":
+				err = downloadYouTubeVideo(url, downloadDir)
+			case "instagram":
+				err = downloadInstagramVideo(url, downloadDir)
+			}
+
+			if err != nil {
+				fmt.Println("Error downloading video:", err)
+			} else {
+				fmt.Println("Video downloaded successfully!")
+			}
+		},
+	}
+
+	rootCmd.AddCommand(downloadCmd)
+
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func createDownloadDirectory() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	downloadDir := filepath.Join(homeDir, "Downloads", "video-downloader")
+	err = os.MkdirAll(downloadDir, 0755)
+	if err != nil {
+		return "", err
+	}
+
+	return downloadDir, nil
+}
+
+func validateURL(url string) (string, error) {
+	parsedURL, err := neturl.Parse(url)
+	if err != nil {
+		return "", err
+	}
+
+	host := parsedURL.Hostname()
+	if host == "www.youtube.com" || host == "youtube.com" || host == "youtu.be" {
+		return "youtube", nil
+	} else if host == "www.instagram.com" || host == "instagram.com" {
+		return "instagram", nil
+	}
+
+	return "", fmt.Errorf("unsupported URL: %s", url)
+}
+
+func downloadYouTubeVideo(url, downloadDir string) error {
+	// TODO: Implement YouTube video downloading
+	return fmt.Errorf("YouTube video downloading not implemented yet")
+}
+
+func downloadInstagramVideo(url, downloadDir string) error {
+	// TODO: Implement Instagram video downloading
+	return fmt.Errorf("Instagram video downloading not implemented yet")
 }
