@@ -278,3 +278,4 @@ func downloadInstagramVideo(url, downloadDir string) error {
     fmt.Printf("\nVideo downloaded: %s\n", filePath)
     return nil
 }
+//TODO Titok video and vinemo video and pixel formats
